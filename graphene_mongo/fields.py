@@ -11,7 +11,7 @@ from graphql_relay.node.node import from_global_id
 from graphene.types.argument import to_arguments
 
 from .utils import get_model_reference_fields
-
+import pdb
 
 # noqa
 class MongoengineListField(Field):
@@ -73,12 +73,23 @@ class MongoengineConnectionField(ConnectionField):
     @property
     def field_args(self):
         def is_filterable(kv):
-            return hasattr(kv[1], '_type') \
-                and callable(getattr(kv[1]._type, '_of_type', None))
+            # Return if list of scalar OR scalar
+            if not hasattr(kv[1], '_type'):
+                return False
+
+            if hasattr(kv[1]._type, "_of_type"):
+                if callable(kv[1]._type._of_type):
+                    return kv[1]._type._of_type
+
+                if hasattr(kv[1]._type._of_type, "_of_type"):
+                    if callable(kv[1]._type._of_type._of_type):
+                        return kv[1]._type._of_type._of_type
+
+            return False
 
         return reduce(
             lambda r, kv: r.update(
-                {kv[0]: kv[1]._type._of_type()}) or r if is_filterable(kv) else r,
+                {kv[0]: is_filterable(kv)()}) or r if is_filterable(kv) else r,
             self.fields.items(), {}
         )
 
@@ -89,6 +100,9 @@ class MongoengineConnectionField(ConnectionField):
                 node = kv[1].get_type()._type._meta
                 r.update({kv[0]: node.fields['id']._type.of_type()})
             return r
+
+            if "targeted_sector" in kv:
+                print(r, kv)
         return reduce(get_reference_field, self.fields.items(), {})
 
     @property
