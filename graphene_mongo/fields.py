@@ -98,11 +98,9 @@ class MongoengineConnectionField(ConnectionField):
         def get_reference_field(r, kv):
             if callable(getattr(kv[1], 'get_type', None)):
                 node = kv[1].get_type()._type._meta
-                r.update({kv[0]: node.fields['id']._type.of_type()})
+                if hasattr(node.fields["id"]._type, "of_type"):
+                    r.update({kv[0]: node.fields['id']._type.of_type()})
             return r
-
-            if "targeted_sector" in kv:
-                print(r, kv)
         return reduce(get_reference_field, self.fields.items(), {})
 
     @property
